@@ -1,5 +1,25 @@
 apply plugin: 'jacoco'
 
+//sourceSets {
+//    test.java.srcDirs += 'src/test/kotlin'
+//    androidTest.java.srcDirs += 'src/androidTest/kotlin'
+//}
+//
+//buildFeatures {
+//    viewBinding true
+//    buildConfig true
+//}
+//
+//testOptions {
+//    unitTests {
+//        includeAndroidResources = true
+//        returnDefaultValues = true
+//    }
+//    execution 'ANDROIDX_TEST_ORCHESTRATOR'
+//    animationsDisabled = true
+//}
+
+
 jacoco {
     toolVersion '0.8.10'
 }
@@ -51,10 +71,26 @@ project.afterEvaluate {
                     def jClasses = "${project.buildDir}/intermediates/javac/${variantName}/classes"
                     def kClasses = "${project.buildDir}/tmp/kotlin-classes/${variantName}"
                     def javaClasses = fileTree(dir: jClasses, excludes: excludes)
-
                     def kotlinClasses = fileTree(dir: kClasses, excludes: excludes)
 
-                    classDirectories.from = files([javaClasses, kotlinClasses])
+                    def kClassesFiltered = "${project.buildDir}/tmp/kotlin-classes/${variantName}/com/madrapps/text/extensions"
+                    def kotlinClassesFiltered = fileTree(dir: kClassesFiltered, excludes: excludes)
+
+                    def kClassesFilteredInvest = "${project.buildDir}/tmp/kotlin-classes/${variantName}/com/madrapps/text/extensions"
+                    def kotlinClassesFilteredInvest = fileTree(dir: jClasses, excludes: excludes)
+
+                    if (project.hasProperty("testingLine")) {
+                        switch (project.testingLine) {
+                            case TestLine.SUBSCRIPTION.value: classDirectories.from = files([kotlinClassesFiltered])
+                                break
+                            case TestLine.INVESTMENT.value: classDirectories.from = files([kotlinClassesFilteredInvest])
+                                break
+                            default :  classDirectories.from = files([javaClasses, kotlinClasses])
+                        }
+                    } else {
+                        classDirectories.from = files([javaClasses, kotlinClasses])
+                    }
+
                     def sourceDirs = ["${project.projectDir}/src/main/java", "${project.projectDir}/src/main/kotlin",
                                       "${project.projectDir}/src/${variantName}/java", "${project.projectDir}/src/${variantName}/kotlin"]
 
@@ -68,5 +104,17 @@ project.afterEvaluate {
         dependsOn(provider {
             tasks.findAll { task -> task.name.endsWith('Coverage') }
         })
+    }
+}
+
+enum TestLine {
+    SUBSCRIPTION("subscription"),
+    INVESTMENT("investment"),
+    ALL("all")
+
+    final String value
+
+    TestLine(String value) {
+        this.value = value
     }
 }
